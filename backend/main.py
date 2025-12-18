@@ -26,6 +26,30 @@ app.add_middleware(
 def read_root():
     return {"message": "Welcome to OrderFlow API", "status": "running"}
 
-# TODO: Include routers from submodules
-# from backend.auth import router as auth_router
-# app.include_router(auth_router)
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from backend.auth import router as auth_router
+
+# ... existing code ...
+
+# Include routers
+app.include_router(auth_router.router)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+
+# Templates
+templates = Jinja2Templates(directory="frontend/templates")
+
+# Simple page routes for testing (can be moved to a frontend router later)
+from fastapi import Request
+from fastapi.responses import HTMLResponse
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/register", response_class=HTMLResponse)
+async def register_page(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
+
