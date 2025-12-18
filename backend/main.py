@@ -29,11 +29,18 @@ def read_root():
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from backend.auth import router as auth_router
+from backend.routers import users, products, orders, dashboard
+from backend.database import engine, Base
 
-# ... existing code ...
+# Create tables
+Base.metadata.create_all(bind=engine)
 
 # Include routers
 app.include_router(auth_router.router)
+app.include_router(users.router)
+app.include_router(products.router)
+app.include_router(orders.router)
+app.include_router(dashboard.router)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
