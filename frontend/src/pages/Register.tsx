@@ -17,6 +17,10 @@ const registerSchema = z.object({
     .min(4, '帳號至少需要 4 個字元')
     .max(20, '帳號最多 20 個字元')
     .regex(/^[a-zA-Z0-9]+$/, '帳號僅限英文與數字'),
+  company_name: z
+    .string()
+    .min(2, '公司名稱至少需要 2 個字元')
+    .max(100, '公司名稱最多 100 個字元'),
   email: z.string().email('請輸入有效的 Email 格式'),
   password: z
     .string()
@@ -62,10 +66,10 @@ export default function Register() {
     setIsSubmitting(true);
     setErrorMessage('');
 
-    const result = await authRegister(data.username, data.email, data.password);
+    const result = await authRegister(data.username, data.email, data.password, data.company_name);
 
     if (result.success) {
-      navigate('/');
+      navigate('/login');
     } else {
       setErrorMessage(result.message);
     }
@@ -107,6 +111,20 @@ export default function Register() {
                 )}
               </div>
 
+              {/* 公司名稱 */}
+              <div className="space-y-2">
+                <Label htmlFor="company_name">公司名稱</Label>
+                <Input
+                  id="company_name"
+                  placeholder="請輸入公司名稱"
+                  {...register('company_name')}
+                  className={errors.company_name ? 'border-destructive' : ''}
+                />
+                {errors.company_name && (
+                  <p className="text-sm text-destructive">{errors.company_name.message}</p>
+                )}
+              </div>
+
               {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -141,7 +159,7 @@ export default function Register() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                
+
                 {/* 密碼強度提示 */}
                 {password && (
                   <div className="space-y-1 mt-2">

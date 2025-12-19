@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { OrderStatus } from "@/data/mockData";
+import type { OrderStatus } from "@/services/api.types";
 
 interface StatusBadgeProps {
   status: OrderStatus;

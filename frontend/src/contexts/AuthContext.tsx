@@ -1,13 +1,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authService, User, UserRole } from '@/services/auth.service';
+import { authService } from '@/services/auth.service';
+import type { User, UserRole } from '@/services/api.types';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<{ success: boolean; message: string }>;
-  register: (username: string, email: string, password: string) => Promise<{ success: boolean; message: string }>;
-  logout: () => void;
+  register: (username: string, email: string, password: string, company_name: string) => Promise<{ success: boolean; message: string }>;
+  logout: () => Promise<void>;
   hasRole: (roles: UserRole[]) => boolean;
   isAdmin: boolean;
   isManager: boolean;
@@ -16,32 +17,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = 'auth_token';
-const USER_KEY = 'auth_user';
+const USER_KEY = 'user';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 初始化時檢查 localStorage
+  // 初始化時檢查用戶登錄狀態
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem(TOKEN_KEY);
-      const storedUser = localStorage.getItem(USER_KEY);
-
-      if (token && storedUser) {
+      if (authService.isAuthenticated()) {
         try {
-          const response = await authService.validateToken(token);
-          if (response.success && response.user) {
-            setUser(response.user);
-          } else {
-            // Token 無效，清除本地儲存
-            localStorage.removeItem(TOKEN_KEY);
-            localStorage.removeItem(USER_KEY);
-          }
-        } catch {
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(USER_KEY);
+          const currentUser = await authService.getCurrentUser();
+          setUser(currentUser);
+          localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+        } catch (error) {
+          // Token 無效或過期，清除本地儲存
+          authService.logout();
         }
       }
       setIsLoading(false);
@@ -51,33 +43,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (username: string, password: string) => {
-    const response = await authService.login(username, password);
-    
-    if (response.success && response.user && response.token) {
-      setUser(response.user);
-      localStorage.setItem(TOKEN_KEY, response.token);
-      localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+    try {
+      const response = await authService.login({ username, password });
+
+      // 獲取用戶信息
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+      localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+
+      return { success: true, message: '登入成功' };
+    } catch (error: any) {
+      return { success: false, message: error.message || '登入失敗' };
     }
-    
-    return { success: response.success, message: response.message };
   };
 
-  const register = async (username: string, email: string, password: string) => {
-    const response = await authService.register(username, email, password);
-    
-    if (response.success && response.user && response.token) {
-      setUser(response.user);
-      localStorage.setItem(TOKEN_KEY, response.token);
-      localStorage.setItem(USER_KEY, JSON.stringify(response.user));
+  const register = async (username: string, email: string, password: string, company_name: string) => {
+    try {
+      await authService.register({ username, email, password, company_name });
+      return { success: true, message: '註冊成功' };
+    } catch (error: any) {
+      return { success: false, message: error.message || '註冊失敗' };
     }
-    
-    return { success: response.success, message: response.message };
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } finally {
+      setUser(null);
+      localStorage.removeItem(USER_KEY);
+    }
   };
 
   const hasRole = (roles: UserRole[]) => {

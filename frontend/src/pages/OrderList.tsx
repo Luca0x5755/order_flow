@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { zhTW } from "date-fns/locale";
-import { CalendarIcon, Search, Filter, X } from "lucide-react";
+import { CalendarIcon, Search, Filter, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,7 +19,8 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderDetailModal } from "@/components/OrderDetailModal";
-import { mockOrders, type Order, type OrderStatus } from "@/data/mockData";
+import { useMyOrders } from "@/hooks/useOrders";
+import type { Order, OrderStatus } from "@/services/api.types";
 import { cn } from "@/lib/utils";
 
 export default function OrderList() {
@@ -35,10 +36,13 @@ export default function OrderList() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
+  // Fetch orders using React Query
+  const { data: orders = [], isLoading } = useMyOrders();
+
   const filteredOrders = useMemo(() => {
-    return mockOrders.filter((order) => {
+    return orders.filter((order) => {
       // Search filter
-      if (searchQuery && !order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (searchQuery && !order.order_number.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
 
@@ -48,7 +52,7 @@ export default function OrderList() {
       }
 
       // Date range filter
-      const orderDate = new Date(order.date);
+      const orderDate = new Date(order.order_date);
       if (dateRange.from && orderDate < dateRange.from) {
         return false;
       }
@@ -62,7 +66,7 @@ export default function OrderList() {
 
       return true;
     });
-  }, [searchQuery, statusFilter, dateRange]);
+  }, [orders, searchQuery, statusFilter, dateRange]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("zh-TW", {
@@ -84,6 +88,16 @@ export default function OrderList() {
   };
 
   const hasActiveFilters = searchQuery || statusFilter !== "all" || dateRange.from || dateRange.to;
+
+  if (isLoading) {
+    return (
+      <div className="container py-8">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8 space-y-6">
@@ -177,7 +191,7 @@ export default function OrderList() {
       </div>
 
       {/* Orders Table */}
-      <div 
+      <div
         className="rounded-xl border bg-card shadow-sm overflow-hidden opacity-0 animate-fade-in"
         style={{ animationDelay: "200ms" }}
       >
@@ -203,7 +217,7 @@ export default function OrderList() {
               ) : (
                 filteredOrders.map((order) => {
                   const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
-                  const productNames = order.items.map((item) => item.productName).join(", ");
+                  const productNames = order.items.map((item) => item.product?.name || '未知商品').join(", ");
 
                   return (
                     <tr
@@ -212,10 +226,10 @@ export default function OrderList() {
                       className="cursor-pointer transition-colors hover:bg-muted/50"
                     >
                       <td className="px-4 py-4">
-                        <span className="font-medium text-primary">{order.orderNumber}</span>
+                        <span className="font-medium text-primary">{order.order_number}</span>
                       </td>
                       <td className="px-4 py-4 text-sm text-muted-foreground">
-                        {order.date}
+                        {format(new Date(order.order_date), 'yyyy-MM-dd')}
                       </td>
                       <td className="px-4 py-4 text-sm hidden sm:table-cell">
                         <span className="line-clamp-1 max-w-xs">{productNames}</span>
@@ -224,7 +238,7 @@ export default function OrderList() {
                         {totalQuantity}
                       </td>
                       <td className="px-4 py-4 text-right font-medium">
-                        {formatCurrency(order.totalAmount)}
+                        {formatCurrency(order.total_amount)}
                       </td>
                       <td className="px-4 py-4 text-center">
                         <StatusBadge status={order.status} />

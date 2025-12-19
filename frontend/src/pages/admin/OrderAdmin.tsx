@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { mockOrders, Order, OrderStatus } from "@/data/mockData";
+import { useAllOrders, useUpdateOrderStatus } from "@/hooks/useOrders";
+import type { Order, OrderStatus } from "@/services/api.types";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -26,21 +27,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Settings } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Search, Settings, Loader2 } from "lucide-react";
+import { format } from "date-fns";
 
 export default function OrderAdmin() {
   const { isAdmin } = useAuth();
-  const { toast } = useToast();
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
+  const { data: orders = [], isLoading } = useAllOrders();
+  const updateOrderStatus = useUpdateOrderStatus();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [newStatus, setNewStatus] = useState<OrderStatus>("pending");
 
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -52,17 +54,15 @@ export default function OrderAdmin() {
 
   const handleStatusUpdate = () => {
     if (!selectedOrder) return;
-    
-    setOrders(prev => prev.map(o => 
-      o.id === selectedOrder.id ? { ...o, status: newStatus } : o
-    ));
-    
-    toast({
-      title: "狀態已更新",
-      description: `訂單 ${selectedOrder.orderNumber} 已更新為 ${getStatusLabel(newStatus)}`,
-    });
-    
-    setSelectedOrder(null);
+
+    updateOrderStatus.mutate(
+      { orderId: selectedOrder.id, data: { status: newStatus } },
+      {
+        onSuccess: () => {
+          setSelectedOrder(null);
+        },
+      }
+    );
   };
 
   const getStatusLabel = (status: OrderStatus) => {
@@ -75,6 +75,14 @@ export default function OrderAdmin() {
     };
     return labels[status];
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -128,11 +136,11 @@ export default function OrderAdmin() {
           <TableBody>
             {filteredOrders.map((order) => (
               <TableRow key={order.id}>
-                <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                <TableCell>{order.customerName}</TableCell>
-                <TableCell>{order.date}</TableCell>
+                <TableCell className="font-medium">{order.order_number}</TableCell>
+                <TableCell>{order.customer_name || 'N/A'}</TableCell>
+                <TableCell>{format(new Date(order.order_date), 'yyyy-MM-dd')}</TableCell>
                 <TableCell className="text-right">
-                  NT$ {order.totalAmount.toLocaleString()}
+                  NT$ {order.total_amount.toLocaleString()}
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={order.status} />
@@ -160,21 +168,21 @@ export default function OrderAdmin() {
           <DialogHeader>
             <DialogTitle>修改訂單狀態</DialogTitle>
           </DialogHeader>
-          
+
           {selectedOrder && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">訂單編號：</span>
-                  <span className="font-medium ml-1">{selectedOrder.orderNumber}</span>
+                  <span className="font-medium ml-1">{selectedOrder.order_number}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">客戶：</span>
-                  <span className="font-medium ml-1">{selectedOrder.customerName}</span>
+                  <span className="font-medium ml-1">{selectedOrder.customer_name || 'N/A'}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">金額：</span>
-                  <span className="font-medium ml-1">NT$ {selectedOrder.totalAmount.toLocaleString()}</span>
+                  <span className="font-medium ml-1">NT$ {selectedOrder.total_amount.toLocaleString()}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">目前狀態：</span>
@@ -204,8 +212,15 @@ export default function OrderAdmin() {
             <Button variant="outline" onClick={() => setSelectedOrder(null)}>
               取消
             </Button>
-            <Button onClick={handleStatusUpdate}>
-              確認更新
+            <Button onClick={handleStatusUpdate} disabled={updateOrderStatus.isPending}>
+              {updateOrderStatus.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  更新中...
+                </>
+              ) : (
+                '確認更新'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

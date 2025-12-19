@@ -7,15 +7,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Package, 
-  MapPin, 
-  Phone, 
-  FileText, 
+import {
+  Package,
+  MapPin,
+  Phone,
+  FileText,
   Calendar,
   X
 } from "lucide-react";
-import type { Order } from "@/data/mockData";
+import type { Order } from "@/services/api.types";
+import { useCancelOrder } from "@/hooks/useOrders";
 import { toast } from "@/hooks/use-toast";
 
 interface OrderDetailModalProps {
@@ -27,12 +28,14 @@ interface OrderDetailModalProps {
 export function OrderDetailModal({ order, open, onOpenChange }: OrderDetailModalProps) {
   if (!order) return null;
 
+  const cancelOrder = useCancelOrder();
+
   const handleCancelOrder = () => {
-    toast({
-      title: "訂單已取消",
-      description: `訂單 ${order.orderNumber} 已成功取消`,
+    cancelOrder.mutate(order.id, {
+      onSuccess: () => {
+        onOpenChange(false);
+      },
     });
-    onOpenChange(false);
   };
 
   const formatCurrency = (amount: number) => {
@@ -59,7 +62,7 @@ export function OrderDetailModal({ order, open, onOpenChange }: OrderDetailModal
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-muted/50 rounded-lg">
             <div>
               <p className="text-sm text-muted-foreground">訂單編號</p>
-              <p className="text-lg font-semibold">{order.orderNumber}</p>
+              <p className="text-lg font-semibold">{order.order_number}</p>
             </div>
             <StatusBadge status={order.status} className="self-start sm:self-center" />
           </div>
@@ -72,7 +75,7 @@ export function OrderDetailModal({ order, open, onOpenChange }: OrderDetailModal
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">訂單日期</p>
-                <p className="font-medium">{order.date}</p>
+                <p className="font-medium">{new Date(order.order_date).toLocaleDateString('zh-TW')}</p>
               </div>
             </div>
 
@@ -82,7 +85,7 @@ export function OrderDetailModal({ order, open, onOpenChange }: OrderDetailModal
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">聯絡電話</p>
-                <p className="font-medium">{order.phone}</p>
+                <p className="font-medium">{order.phone || 'N/A'}</p>
               </div>
             </div>
 
@@ -92,7 +95,7 @@ export function OrderDetailModal({ order, open, onOpenChange }: OrderDetailModal
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">配送地址</p>
-                <p className="font-medium">{order.shippingAddress}</p>
+                <p className="font-medium">{order.delivery_address}</p>
               </div>
             </div>
 
@@ -130,9 +133,9 @@ export function OrderDetailModal({ order, open, onOpenChange }: OrderDetailModal
                 <tbody className="divide-y">
                   {order.items.map((item) => (
                     <tr key={item.id}>
-                      <td className="px-4 py-3 text-sm">{item.productName}</td>
+                      <td className="px-4 py-3 text-sm">{item.product?.name || '未知商品'}</td>
                       <td className="px-4 py-3 text-sm text-center">{item.quantity}</td>
-                      <td className="px-4 py-3 text-sm text-right">{formatCurrency(item.unitPrice)}</td>
+                      <td className="px-4 py-3 text-sm text-right">{formatCurrency(item.unit_price)}</td>
                       <td className="px-4 py-3 text-sm text-right font-medium">{formatCurrency(item.subtotal)}</td>
                     </tr>
                   ))}
@@ -141,7 +144,7 @@ export function OrderDetailModal({ order, open, onOpenChange }: OrderDetailModal
                   <tr>
                     <td colSpan={3} className="px-4 py-3 text-right font-semibold">總計</td>
                     <td className="px-4 py-3 text-right font-bold text-lg text-primary">
-                      {formatCurrency(order.totalAmount)}
+                      {formatCurrency(order.total_amount)}
                     </td>
                   </tr>
                 </tfoot>
@@ -152,8 +155,8 @@ export function OrderDetailModal({ order, open, onOpenChange }: OrderDetailModal
           {/* Cancel Button */}
           {order.status === 'pending' && (
             <div className="flex justify-end pt-4">
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={handleCancelOrder}
                 className="gap-2"
               >

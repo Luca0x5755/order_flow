@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from backend.database import get_db
 from backend.models import User
-from backend.auth import schemas, utils
+from backend.auth import schemas, utils, dependencies
 from backend.auth.utils import ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -98,3 +98,10 @@ def login(user_credentials: schemas.UserLogin, response: Response, db: Session =
 def logout(response: Response):
     response.delete_cookie("access_token")
     return {"message": "Logged out successfully"}
+
+@router.get("/me", response_model=schemas.UserResponse)
+async def get_current_user_info(
+    current_user: User = Depends(dependencies.get_current_active_user)
+):
+    """获取当前登录用户的信息"""
+    return current_user

@@ -134,13 +134,6 @@ export default function Login() {
                 </Link>
               </p>
             </div>
-
-            {/* 預設帳號提示 */}
-            <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border/50">
-              <p className="text-xs text-muted-foreground text-center">
-                預設帳號：<code className="bg-muted px-1 rounded">admin</code> / <code className="bg-muted px-1 rounded">password123</code>
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>

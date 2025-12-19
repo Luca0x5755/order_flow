@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Minus, Trash2, ShoppingCart, Send } from "lucide-react";
+import { Plus, Minus, Trash2, ShoppingCart, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,13 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { products, type Product } from "@/data/mockData";
-import { toast } from "@/hooks/use-toast";
+import { useProducts } from "@/hooks/useProducts";
+import { useCreateOrder } from "@/hooks/useOrders";
+import type { Product } from "@/services/api.types";
 import { cn } from "@/lib/utils";
 
 const orderSchema = z.object({
-  shippingAddress: z.string().min(5, "請輸入完整的配送地址"),
-  phone: z.string().regex(/^0\d{2,3}-?\d{3}-?\d{3,4}$/, "請輸入有效的電話號碼"),
+  delivery_address: z.string().min(5, "請輸入完整的配送地址"),
   notes: z.string().optional(),
 });
 
@@ -43,13 +43,15 @@ export default function NewOrder() {
   const navigate = useNavigate();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch products using React Query
+  const { data: products = [], isLoading: productsLoading } = useProducts({ include_inactive: false });
+  const createOrder = useCreateOrder();
 
   const form = useForm<OrderFormData>({
     resolver: zodResolver(orderSchema),
     defaultValues: {
-      shippingAddress: "",
-      phone: "",
+      delivery_address: "",
       notes: "",
     },
   });
@@ -108,26 +110,34 @@ export default function NewOrder() {
 
   const onSubmit = async (data: OrderFormData) => {
     if (cart.length === 0) {
-      toast({
-        title: "請選擇商品",
-        description: "購物車是空的，請先添加商品",
-        variant: "destructive",
-      });
       return;
     }
 
-    setIsSubmitting(true);
+    const orderData = {
+      items: cart.map((item) => ({
+        product_id: item.product.id,
+        quantity: item.quantity,
+      })),
+      delivery_address: data.delivery_address,
+      notes: data.notes || undefined,
+    };
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    toast({
-      title: "訂單已建立！",
-      description: `訂單金額：${formatCurrency(totalAmount)}`,
+    createOrder.mutate(orderData, {
+      onSuccess: () => {
+        navigate("/orders");
+      },
     });
-
-    navigate("/orders");
   };
+
+  if (productsLoading) {
+    return (
+      <div className="container py-8 max-w-3xl">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8 max-w-3xl">
@@ -141,8 +151,8 @@ export default function NewOrder() {
 
       <div className="space-y-8">
         {/* Product Selection */}
-        <div 
-          className="space-y-4 opacity-0 animate-fade-in" 
+        <div
+          className="space-y-4 opacity-0 animate-fade-in"
           style={{ animationDelay: "100ms" }}
         >
           <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -257,7 +267,7 @@ export default function NewOrder() {
         {/* Shipping Form */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div 
+            <div
               className="space-y-4 opacity-0 animate-fade-in"
               style={{ animationDelay: "200ms" }}
             >
@@ -265,26 +275,12 @@ export default function NewOrder() {
 
               <FormField
                 control={form.control}
-                name="shippingAddress"
+                name="delivery_address"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>配送地址</FormLabel>
                     <FormControl>
                       <Input placeholder="請輸入完整配送地址" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>聯絡電話</FormLabel>
-                    <FormControl>
-                      <Input placeholder="例：0912-345-678" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -314,7 +310,7 @@ export default function NewOrder() {
             </div>
 
             {/* Submit Button */}
-            <div 
+            <div
               className="pt-4 opacity-0 animate-fade-in"
               style={{ animationDelay: "300ms" }}
             >
@@ -322,11 +318,12 @@ export default function NewOrder() {
                 type="submit"
                 size="lg"
                 className="w-full text-lg h-14 gap-2"
-                disabled={isSubmitting || cart.length === 0}
+                disabled={createOrder.isPending || cart.length === 0}
               >
-                {isSubmitting ? (
+                {createOrder.isPending ? (
                   <>
-                    <span className="animate-pulse-soft">處理中...</span>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    處理中...
                   </>
                 ) : (
                   <>

@@ -1,17 +1,25 @@
 import { useState } from "react";
-import { Package, Clock, DollarSign, ArrowRight } from "lucide-react";
+import { Package, Clock, DollarSign, ArrowRight, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { OrderDetailModal } from "@/components/OrderDetailModal";
 import { Button } from "@/components/ui/button";
-import { getMonthlyStats, getRecentOrders, type Order } from "@/data/mockData";
+import { useDashboardStats } from "@/hooks/useDashboard";
+import { useMyOrders } from "@/hooks/useOrders";
+import type { Order } from "@/services/api.types";
+import { format } from "date-fns";
 
 export default function Dashboard() {
-  const stats = getMonthlyStats();
-  const recentOrders = getRecentOrders(5);
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: allOrders = [], isLoading: ordersLoading } = useMyOrders();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  //  Get recent 5 orders
+  const recentOrders = [...allOrders]
+    .sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime())
+    .slice(0, 5);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('zh-TW', {
@@ -25,6 +33,18 @@ export default function Dashboard() {
     setSelectedOrder(order);
     setModalOpen(true);
   };
+
+  if (statsLoading || ordersLoading) {
+    return (
+      <div className="container py-8">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
+
+  const pendingOrders = allOrders.filter(o => o.status === 'pending').length;
 
   return (
     <div className="container py-8 space-y-8">
@@ -40,21 +60,21 @@ export default function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="本月訂單數"
-          value={stats.totalOrders}
+          value={stats?.this_month_orders || 0}
           icon={Package}
           variant="default"
           animationDelay="100ms"
         />
         <StatCard
           title="待處理訂單"
-          value={stats.pendingOrders}
+          value={pendingOrders}
           icon={Clock}
           variant="warning"
           animationDelay="200ms"
         />
         <StatCard
           title="本月總金額"
-          value={formatCurrency(stats.totalAmount)}
+          value={formatCurrency(stats?.this_month_amount || 0)}
           icon={DollarSign}
           variant="success"
           animationDelay="300ms"
@@ -86,22 +106,22 @@ export default function Dashboard() {
               </thead>
               <tbody className="divide-y">
                 {recentOrders.map((order, index) => (
-                  <tr 
+                  <tr
                     key={order.id}
                     onClick={() => handleOrderClick(order)}
                     className="cursor-pointer transition-colors hover:bg-muted/50"
-                    style={{ 
+                    style={{
                       animationDelay: `${500 + index * 50}ms`,
                     }}
                   >
                     <td className="px-4 py-4">
-                      <span className="font-medium text-primary">{order.orderNumber}</span>
+                      <span className="font-medium text-primary">{order.order_number}</span>
                     </td>
                     <td className="px-4 py-4 text-sm text-muted-foreground">
-                      {order.date}
+                      {format(new Date(order.order_date), 'yyyy-MM-dd')}
                     </td>
                     <td className="px-4 py-4 text-right font-medium">
-                      {formatCurrency(order.totalAmount)}
+                      {formatCurrency(order.total_amount)}
                     </td>
                     <td className="px-4 py-4 text-center">
                       <StatusBadge status={order.status} />

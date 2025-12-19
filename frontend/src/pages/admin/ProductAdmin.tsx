@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { products as initialProducts, Product } from "@/data/mockData";
+import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/useProducts";
+import type { Product } from "@/services/api.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,8 +21,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Plus, Pencil, Trash2, Search, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -39,15 +39,18 @@ const productSchema = z.object({
   description: z.string().min(1, "請輸入商品描述"),
   price: z.number().min(1, "價格必須大於 0"),
   stock: z.number().min(0, "庫存不能為負數"),
-  imageUrl: z.string().url("請輸入有效的圖片網址"),
-  isActive: z.boolean(),
+  image_url: z.string().url("請輸入有效的圖片網址").optional().or(z.literal("")),
+  is_active: z.boolean(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
 
 export default function ProductAdmin() {
-  const { toast } = useToast();
-  const [productList, setProductList] = useState<Product[]>(initialProducts);
+  const { data: products = [], isLoading } = useProducts({ include_inactive: true });
+  const createProduct = useCreateProduct();
+  const updateProduct = useUpdateProduct();
+  const deleteProduct = useDeleteProduct();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -59,12 +62,12 @@ export default function ProductAdmin() {
       description: "",
       price: 0,
       stock: 0,
-      imageUrl: "",
-      isActive: true,
+      image_url: "",
+      is_active: true,
     },
   });
 
-  const filteredProducts = productList.filter(product =>
+  const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -75,8 +78,8 @@ export default function ProductAdmin() {
       description: "",
       price: 0,
       stock: 0,
-      imageUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop",
-      isActive: true,
+      image_url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop",
+      is_active: true,
     });
     setIsDialogOpen(true);
   };
@@ -88,61 +91,56 @@ export default function ProductAdmin() {
       description: product.description,
       price: product.price,
       stock: product.stock,
-      imageUrl: product.imageUrl,
-      isActive: product.isActive,
+      image_url: product.image_url || "",
+      is_active: product.is_active,
     });
     setIsDialogOpen(true);
   };
 
   const handleDelete = (product: Product) => {
-    // Soft delete - just set isActive to false
-    setProductList(prev => prev.map(p =>
-      p.id === product.id ? { ...p, isActive: false } : p
-    ));
-    toast({
-      title: "商品已下架",
-      description: `${product.name} 已設為下架狀態`,
-    });
+    if (confirm(`確定要刪除 ${product.name} 嗎？`)) {
+      deleteProduct.mutate(product.id);
+    }
   };
 
   const onSubmit = (data: ProductFormData) => {
     if (editingProduct) {
-      // Update existing product
-      const updatedProduct: Product = {
-        id: editingProduct.id,
-        name: data.name,
-        description: data.description,
-        price: data.price,
-        stock: data.stock,
-        imageUrl: data.imageUrl,
-        isActive: data.isActive,
-      };
-      setProductList(prev => prev.map(p =>
-        p.id === editingProduct.id ? updatedProduct : p
-      ));
-      toast({
-        title: "商品已更新",
-        description: `${data.name} 已成功更新`,
-      });
+      updateProduct.mutate(
+        {
+          id: editingProduct.id,
+          data: {
+            ...data,
+            image_url: data.image_url || undefined,
+          }
+        },
+        {
+          onSuccess: () => {
+            setIsDialogOpen(false);
+          },
+        }
+      );
     } else {
-      // Add new product
-      const newProduct: Product = {
-        id: String(Date.now()),
-        name: data.name,
-        description: data.description,
-        price: data.price,
-        stock: data.stock,
-        imageUrl: data.imageUrl,
-        isActive: data.isActive,
-      };
-      setProductList(prev => [...prev, newProduct]);
-      toast({
-        title: "商品已新增",
-        description: `${data.name} 已成功新增`,
-      });
+      createProduct.mutate(
+        {
+          ...data,
+          image_url: data.image_url || undefined,
+        },
+        {
+          onSuccess: () => {
+            setIsDialogOpen(false);
+          },
+        }
+      );
     }
-    setIsDialogOpen(false);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -185,11 +183,13 @@ export default function ProductAdmin() {
             {filteredProducts.map((product) => (
               <TableRow key={product.id}>
                 <TableCell>
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="w-12 h-12 object-cover rounded-md"
-                  />
+                  {product.image_url && (
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="w-12 h-12 object-cover rounded-md"
+                    />
+                  )}
                 </TableCell>
                 <TableCell>
                   <div>
@@ -204,8 +204,8 @@ export default function ProductAdmin() {
                 </TableCell>
                 <TableCell className="text-right">{product.stock}</TableCell>
                 <TableCell>
-                  <Badge variant={product.isActive ? "default" : "secondary"}>
-                    {product.isActive ? "上架中" : "已下架"}
+                  <Badge variant={product.is_active ? "default" : "secondary"}>
+                    {product.is_active ? "上架中" : "已下架"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -246,7 +246,7 @@ export default function ProductAdmin() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="imageUrl"
+                name="image_url"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>圖片網址</FormLabel>
@@ -328,7 +328,7 @@ export default function ProductAdmin() {
 
               <FormField
                 control={form.control}
-                name="isActive"
+                name="is_active"
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-lg border p-3">
                     <div>
@@ -351,8 +351,15 @@ export default function ProductAdmin() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   取消
                 </Button>
-                <Button type="submit">
-                  {editingProduct ? "更新" : "新增"}
+                <Button type="submit" disabled={createProduct.isPending || updateProduct.isPending}>
+                  {(createProduct.isPending || updateProduct.isPending) ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      處理中...
+                    </>
+                  ) : (
+                    editingProduct ? "更新" : "新增"
+                  )}
                 </Button>
               </DialogFooter>
             </form>

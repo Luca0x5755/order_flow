@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from typing import List, Optional
 from datetime import datetime
@@ -72,15 +72,21 @@ def create_order(
         db.add(item)
         
     db.commit()
+    # Eager load the product data for the response
     db.refresh(new_order)
-    return new_order
+    order_with_products = db.query(Order).options(
+        joinedload(Order.items).joinedload(OrderItem.product)
+    ).filter(Order.id == new_order.id).first()
+    return order_with_products
 
 @router.get("/my-orders", response_model=List[schemas.OrderResponse])
 def read_my_orders(
     db: Session = Depends(get_db),
     current_user: User = Depends(dependencies.get_current_active_user)
 ):
-    orders = db.query(Order).filter(Order.user_id == current_user.id).order_by(desc(Order.order_date)).all()
+    orders = db.query(Order).options(
+        joinedload(Order.items).joinedload(OrderItem.product)
+    ).filter(Order.user_id == current_user.id).order_by(desc(Order.order_date)).all()
     return orders
 
 @router.post("/{order_id}/cancel", response_model=schemas.OrderResponse)
@@ -110,8 +116,11 @@ def cancel_my_order(
             product.stock += item.quantity
             
     db.commit()
-    db.refresh(order)
-    return order
+    # Eager load the product data for the response
+    order_with_products = db.query(Order).options(
+        joinedload(Order.items).joinedload(OrderItem.product)
+    ).filter(Order.id == order.id).first()
+    return order_with_products
 
 # Staff Routes (Admin + Account Manager)
 
@@ -132,7 +141,9 @@ def read_all_orders(
     if user_id:
         query = query.filter(Order.user_id == user_id)
         
-    orders = query.offset(skip).limit(limit).all()
+    orders = query.options(
+        joinedload(Order.items).joinedload(OrderItem.product)
+    ).offset(skip).limit(limit).all()
     return orders
 
 # Admin Routes
@@ -161,5 +172,8 @@ def update_order_status(
 
     order.status = status_data.status
     db.commit()
-    db.refresh(order)
-    return order
+    # Eager load the product data for the response
+    order_with_products = db.query(Order).options(
+        joinedload(Order.items).joinedload(OrderItem.product)
+    ).filter(Order.id == order.id).first()
+    return order_with_products
