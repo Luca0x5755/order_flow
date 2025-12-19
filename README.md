@@ -44,6 +44,10 @@ uv run scripts/create_tables.py
 
 # 同步 Google Sheets
 uv run scripts/sync_sheets.py
+
+# 匯出週報表到 Google Sheets
+# 需確認 config/google-credentials.json 存在
+uv run scripts/export_orders_to_gsheet.py
 ```
 
 ## 專案結構

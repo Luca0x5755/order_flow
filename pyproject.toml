@@ -19,4 +19,6 @@ dependencies = [
     "sqlalchemy>=2.0.45",
     "supabase>=2.27.0",
     "uvicorn>=0.38.0",
+    "gspread>=6.1.4",
+    "google-auth>=2.37.0",
 ]
