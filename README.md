@@ -27,6 +27,13 @@ uv run uvicorn backend.main:app --reload
 API 服務將在 `http://localhost:8000` 運行。
 API 文件 (Swagger UI) 可於 `http://localhost:8000/docs` 查看。
 
+### 啟動前端伺服器
+
+```bash
+cd frontend
+npm run dev
+```
+
 ### 執行腳本
 
 若要執行工具腳本：
