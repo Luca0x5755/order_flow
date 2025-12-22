@@ -6,9 +6,11 @@ import {
   ShoppingCart, 
   Users,
   ChevronLeft,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import ReminderPopover from "@/components/ReminderPopover";
 
 interface AdminSidebarProps {
   collapsed?: boolean;
@@ -23,6 +25,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
     { path: "/admin", label: "儀表板", icon: LayoutDashboard },
     { path: "/admin/orders", label: "訂單管理", icon: ShoppingCart },
     { path: "/admin/products", label: "商品管理", icon: Package },
+    { path: "/admin/crm", label: "客戶管理", icon: Building2 },
     ...(isSuperAdmin ? [{ path: "/admin/users", label: "用戶管理", icon: Users }] : []),
   ];
 
@@ -37,17 +40,19 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
         {!collapsed && (
           <h2 className="font-semibold text-lg">後台管理</h2>
         )}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={onToggle}
-          className={cn(collapsed && "mx-auto")}
-        >
+        <div className={cn("flex items-center gap-1", collapsed && "mx-auto")}>
+          <ReminderPopover />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onToggle}
+          >
           <ChevronLeft className={cn(
             "h-4 w-4 transition-transform",
             collapsed && "rotate-180"
           )} />
         </Button>
+        </div>
       </div>
 
       <nav className="flex-1 p-2 space-y-1">

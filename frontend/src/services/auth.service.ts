@@ -1,10 +1,13 @@
 import apiClient from '@/lib/api.config';
 import type {
   User,
+  UserRole,
   AuthResponse,
   LoginRequest,
   RegisterRequest
 } from './api.types';
+
+export type { User, UserRole } from './api.types';
 
 export const authService = {
   /**
@@ -63,5 +66,29 @@ export const authService = {
    */
   getToken(): string | null {
     return localStorage.getItem('access_token');
+  },
+
+  /**
+   * 获取所有用户 (仅 super_admin)
+   */
+  async getAllUsers(): Promise<User[]> {
+    const response = await apiClient.get('/users');
+    return response.data;
+  },
+
+  /**
+   * 更新用户角色 (仅 super_admin)
+   */
+  async updateUserRole(userId: string, role: UserRole): Promise<{ success: boolean }> {
+    await apiClient.put(`/users/${userId}/role`, { role });
+    return { success: true };
+  },
+
+  /**
+   * 切换用户激活状态 (仅 super_admin)
+   */
+  async toggleUserActive(userId: string, isActive: boolean): Promise<{ success: boolean }> {
+    await apiClient.put(`/users/${userId}/status`, { is_active: isActive });
+    return { success: true };
   },
 };

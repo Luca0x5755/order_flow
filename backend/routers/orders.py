@@ -142,7 +142,8 @@ def read_all_orders(
         query = query.filter(Order.user_id == user_id)
         
     orders = query.options(
-        joinedload(Order.items).joinedload(OrderItem.product)
+        joinedload(Order.items).joinedload(OrderItem.product),
+        joinedload(Order.user)
     ).offset(skip).limit(limit).all()
     return orders
 

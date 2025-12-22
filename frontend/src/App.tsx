@@ -17,6 +17,8 @@ import AdminHome from "./pages/admin/AdminHome";
 import OrderAdmin from "./pages/admin/OrderAdmin";
 import ProductAdmin from "./pages/admin/ProductAdmin";
 import UserAdmin from "./pages/admin/UserAdmin";
+import CustomerList from "./pages/admin/CustomerList";
+import CustomerDetail from "./pages/admin/CustomerDetail";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -82,6 +84,8 @@ function AppContent() {
           <Route index element={<AdminHome />} />
           <Route path="orders" element={<OrderAdmin />} />
           <Route path="products" element={<ProductAdmin />} />
+          <Route path="crm" element={<CustomerList />} />
+          <Route path="crm/:id" element={<CustomerDetail />} />
           <Route path="users" element={<UserAdmin />} />
         </Route>
         

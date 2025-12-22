@@ -95,6 +95,7 @@ class OrderResponse(BaseModel):
     delivery_address: str
     notes: Optional[str] = None
     items: List[OrderItemResponse]
+    user: Optional[UserResponse] = None
 
     class Config:
         from_attributes = True
@@ -110,3 +111,68 @@ class StatsResponse(BaseModel):
     # Admin fields
     total_users: Optional[int] = None
     total_products: Optional[int] = None
+
+# CRM Schemas
+
+class CustomerBase(BaseModel):
+    company_name: str
+    contact_person: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    industry: Optional[str] = None
+    source: Optional[str] = None
+
+class CustomerCreate(CustomerBase):
+    pass
+
+class CustomerUpdate(BaseModel):
+    company_name: Optional[str] = None
+    contact_person: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    industry: Optional[str] = None
+    source: Optional[str] = None
+
+class CustomerResponse(CustomerBase):
+    id: str
+    grade: str
+    total_orders: int
+    total_amount: float
+    last_order_date: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class InteractionBase(BaseModel):
+    interaction_type: str
+    content: Optional[str] = None
+    next_action: Optional[str] = None
+
+class InteractionCreate(InteractionBase):
+    pass
+
+class InteractionResponse(InteractionBase):
+    id: str
+    customer_id: str
+    action_completed: bool
+    recorded_by: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ReminderResponse(BaseModel):
+    customer_id: str
+    company_name: str
+    reminder_type: str  # "no_order" or "pending_action"
+    reason: str
+    days_since_order: Optional[int] = None
+    last_order_date: Optional[datetime] = None
+
+class GradeRecalculateResponse(BaseModel):
+    updated_count: int
+    message: str

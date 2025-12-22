@@ -13,7 +13,8 @@ import {
   Phone,
   FileText,
   Calendar,
-  X
+  X,
+  Users
 } from "lucide-react";
 import type { Order } from "@/services/api.types";
 import { useCancelOrder } from "@/hooks/useOrders";
@@ -81,11 +82,13 @@ export function OrderDetailModal({ order, open, onOpenChange }: OrderDetailModal
 
             <div className="flex items-start gap-3">
               <div className="rounded-lg bg-primary/10 p-2">
-                <Phone className="h-4 w-4 text-primary" />
+                <Users className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">聯絡電話</p>
-                <p className="font-medium">{order.phone || 'N/A'}</p>
+                <p className="text-sm text-muted-foreground">客戶資訊</p>
+                <p className="font-medium">{order.user?.company_name || order.customer_name || 'N/A'}</p>
+                <p className="text-xs text-muted-foreground">{order.user?.email}</p>
+                {order.phone && <p className="text-xs text-muted-foreground">{order.phone}</p>}
               </div>
             </div>
 

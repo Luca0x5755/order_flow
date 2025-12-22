@@ -7,6 +7,7 @@ wheels/
 *.egg-info
 .env
 config/
+!config/crm_rules.json
 
 # Virtual environments
 .venv

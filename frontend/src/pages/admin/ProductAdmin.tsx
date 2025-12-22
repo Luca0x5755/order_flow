@@ -122,7 +122,11 @@ export default function ProductAdmin() {
     } else {
       createProduct.mutate(
         {
-          ...data,
+          name: data.name,
+          description: data.description,
+          price: data.price,
+          stock: data.stock,
+          is_active: data.is_active,
           image_url: data.image_url || undefined,
         },
         {

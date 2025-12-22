@@ -58,6 +58,7 @@ export interface Order {
     notes?: string;
     order_date: string;
     items: OrderItem[];
+    user?: User;
 }
 
 export interface CreateOrderRequest {

@@ -48,6 +48,9 @@ uv run scripts/sync_sheets.py
 # 匯出週報表到 Google Sheets
 # 需確認 config/google-credentials.json 存在
 uv run scripts/export_orders_to_gsheet.py
+
+# 在專案根目錄執行
+uv run scripts/create_crm_tables.py
 ```
 
 ## 專案結構

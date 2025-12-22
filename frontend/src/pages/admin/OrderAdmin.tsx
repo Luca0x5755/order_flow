@@ -42,6 +42,7 @@ export default function OrderAdmin() {
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.user?.company_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.customer_name?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -137,7 +138,7 @@ export default function OrderAdmin() {
             {filteredOrders.map((order) => (
               <TableRow key={order.id}>
                 <TableCell className="font-medium">{order.order_number}</TableCell>
-                <TableCell>{order.customer_name || 'N/A'}</TableCell>
+                <TableCell>{order.user?.company_name || order.customer_name || 'N/A'}</TableCell>
                 <TableCell>{format(new Date(order.order_date), 'yyyy-MM-dd')}</TableCell>
                 <TableCell className="text-right">
                   NT$ {order.total_amount.toLocaleString()}
@@ -178,7 +179,7 @@ export default function OrderAdmin() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">客戶：</span>
-                  <span className="font-medium ml-1">{selectedOrder.customer_name || 'N/A'}</span>
+                  <span className="font-medium ml-1">{selectedOrder.user?.company_name || selectedOrder.customer_name || 'N/A'}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">金額：</span>

@@ -71,3 +71,39 @@ class OrderItem(Base):
     # Relationships
     order = relationship("Order", back_populates="items")
     product = relationship("Product", back_populates="order_items")
+
+class Customer(Base):
+    __tablename__ = "customers"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_name = Column(String, nullable=False)
+    contact_person = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    email = Column(String, unique=True, nullable=True, index=True)
+    address = Column(Text, nullable=True)
+    grade = Column(String, default="C")  # A/B/C
+    industry = Column(String, nullable=True)
+    source = Column(String, nullable=True)  # 網站/展會/推薦等
+    total_orders = Column(Integer, default=0)
+    total_amount = Column(Numeric(10, 2), default=0)
+    last_order_date = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    interactions = relationship("Interaction", back_populates="customer", cascade="all, delete-orphan")
+
+class Interaction(Base):
+    __tablename__ = "interactions"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    customer_id = Column(String, ForeignKey("customers.id"), nullable=False)
+    interaction_type = Column(String, nullable=False)  # 電話/Email/拜訪
+    content = Column(Text, nullable=True)
+    next_action = Column(Text, nullable=True)
+    action_completed = Column(Boolean, default=False)
+    recorded_by = Column(String, nullable=True)  # user_id or username
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    customer = relationship("Customer", back_populates="interactions")
